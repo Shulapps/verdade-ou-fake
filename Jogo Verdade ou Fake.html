@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verdade ou Fake?</title>
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #090d16;
+  color: #f1f5f9;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+/* Background grid efeito game */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.5) 0%, rgba(9, 13, 22, 0.95) 100%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 30px 30px, 30px 30px;
+  z-index: -1;
+}
+
+.screen {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.card {
+  width: min(850px, 100%);
+  background: rgba(21, 29, 43, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 36px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+}
+
+/* Typography & Badges */
+h1 {
+  font-size: clamp(32px, 5vw, 54px);
+  font-weight: 900;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+}
+
+h2 {
+  font-size: clamp(20px, 3vw, 30px);
+  color: #f8fafc;
+}
+
+p {
+  font-size: 17px;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+/* Buttons */
+button {
+  border: 0;
+  border-radius: 14px;
+  padding: 18px 28px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.primary {
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+.primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.search-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 100%;
+}
+.search-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.choice-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (max-width: 600px) {
+  .choice-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.choice {
+  padding: 20px;
+  font-size: 17px;
+  border-radius: 16px;
+}
+
+.true {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 2px solid rgba(34, 197, 94, 0.4);
+}
+.true:hover:not(:disabled) {
+  background: #22c55e;
+  color: #052e16;
+  border-color: #22c55e;
+}
+
+.fake {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 2px solid rgba(239, 68, 68, 0.4);
+}
+.fake:hover:not(:disabled) {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+/* Game HUD Top */
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 24px;
+}
+
+.timer-box {
+  background: #0f172a;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  padding: 10px 20px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.timer-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 1px;
+}
+
+.timer {
+  font-size: 32px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.timer.warning {
+  color: #f43f5e;
+  text-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* News Box (Desafio) */
+.news-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 4px solid #3b82f6;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.news-card small {
+  color: #38bdf8;
+  font-weight: 800;
+  letter-spacing: 1px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.news-card h3 {
+  font-size: 20px;
+  line-height: 1.5;
+  color: #f1f5f9;
+  margin: 12px 0;
+  font-weight: 600;
+}
+
+/* Banner de alerta quando o tempo acaba */
+.timeout-banner {
+  background: rgba(244, 63, 94, 0.2);
+  border: 1px solid #f43f5e;
+  color: #fda4af;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  animation: bannerSlide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bannerSlide {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Tip & Linkbox */
+.tip {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.center { text-align: center; }
+
+/* Screen Result Styling */
+.result-header {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.result-title {
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+.result-box {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 16px;
+  padding: 20px;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 20px 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ok { color: #4ade80; border-color: rgba(34, 197, 94, 0.3); }
+.bad { color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+
+.educational-tip {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: left;
+  margin-bottom: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.educational-tip h4 {
+  color: #e2e8f0;
+  margin-bottom: 8px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.educational-tip p {
+  font-size: 14px;
+  margin: 0;
+  color: #94a3b8;
+}
+</style>
+</head>
+<body>
+
+<!-- TELA INICIAL -->
+<section id="start" class="screen">
+  <div class="card center">
+    <div class="badge">🎮 SIMULADOR DE INVESTIGAÇÃO</div>
+    <h1>VERDADE OU FAKE?</h1>
+    <p>Sua missão é checar a veracidade de notícias virais. Você terá exatamente <b>5 minutos</b> para investigar na web, cruzar fontes e emitir seu veredito.</p>
+    
+    <div style="margin: 30px 0;">
+      <button class="primary" style="width: 100%; max-width: 320px; font-size: 20px;" onclick="startGame()">
+        ▶ JOGAR
+      </button>
+    </div>
+
+    <div class="tip" style="justify-content: center;">
+      <span>💡 Dica: Ao iniciar, use o botão de busca para checar a notícia em uma nova aba.</span>
+    </div>
+  </div>
+</section>
+
+<!-- TELA DE JOGO (HUD) -->
+<section id="game" class="screen hidden">
+  <div class="card">
+    <div class="hud-top">
+      <div>
+        <div class="badge">RODADA EM ANDAMENTO</div>
+        <h2>Analise as evidências</h2>
+      </div>
+      <div class="timer-box">
+        <div class="timer-label">TEMPO RESTANTE</div>
+        <div id="timer" class="timer">05:00</div>
+      </div>
+    </div>
+
+    <div id="timeoutBanner" class="timeout-banner hidden">
+      ⏰ TEMPO ESGOTADO! ESCOLHA SUA RESPOSTA.
+    </div>
+
+    <div class="news-card">
+      <small>🔍 NOTÍCIA EM INVESTIGAÇÃO</small>
+      <h3 id="newsTitle">Carregando notícia...</h3>
+      <p style="font-size: 14px; margin: 0; color: #64748b;"><b>Objetivo:</b> Descubra se esta informação é verdadeira ou falsa antes do tempo esgotar.</p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <button id="searchBtn" class="search-btn" onclick="openSearch()">
+        🌐 ABRIR GOOGLE PARA PESQUISAR
+      </button>
+    </div>
+
+    <div class="choice-container">
+      <button id="btnTrue" class="choice true" onclick="answer(true)">
+        ✓ VERDADEIRA
+      </button>
+      <button id="btnFake" class="choice fake" onclick="answer(false)">
+        ✕ FALSA
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- TELA DE RESULTADO -->
+<section id="result" class="screen hidden">
+  <div class="card center">
+    <div id="resultIcon" class="result-header">🎯</div>
+    <div class="badge" id="resultBadge">RESULTADO DA RODADA</div>
+    <h1 id="resultTitle">VEREDITO</h1>
+    
+    <div id="resultText" class="result-box"></div>
+
+    <div class="educational-tip">
+      <h4>💡 COLOQUE EM PRÁTICA:</h4>
+      <p>Antes de compartilhar qualquer conteúdo, verifique a fonte original, pesquise em múltiplos veículos de imprensa confiáveis e desconfie de manchetismos alarmistas.</p>
+    </div>
+
+    <button class="primary" style="width: 100%; max-width: 320px;" onclick="startRound()">
+      🔄 JOGAR NOVAMENTE
+    </button>
+  </div>
+</section>
+
+<script>
+let seconds = 300;
+let interval = null;
+let answered = false;
+let audioCtx = null;
+
+const NEWS_LIST = [
+  {
+    title: '“NASA anuncia descoberta de água líquida em Marte em uma região onde humanos poderiam sobreviver.”',
+    correct: false
+  },
+  {
+    title: '“Em fevereiro de 2021, o rover Perseverance, da NASA, pousou com sucesso na cratera Jezero, em Marte, para buscar sinais de vida microbiana antiga.”',
+    correct: true
+  },
+  {
+    title: '“Um vídeo viral afirmou que as vacinas contra a Covid-19 continham microchips capazes de rastrear a localização das pessoas.”',
+    correct: false
+  }
+];
+
+let currentNews = NEWS_LIST[0];
+
+/* Inicializa Web Audio API ao interagir */
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+/* Toca o beep de alerta ao zerar o cronômetro */
+function playBeep() {
+  if (!audioCtx) return;
+  try {
+    const now = audioCtx.currentTime;
+    
+    // Pulso 1
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(880, now);
+    gain1.gain.setValueAtTime(0.4, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.25);
+
+    // Pulso 2
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(880, now + 0.3);
+    gain2.gain.setValueAtTime(0.4, now + 0.3);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.3);
+    osc2.stop(now + 0.55);
+  } catch (e) {
+    console.log("Áudio não pôde ser reproduzido:", e);
+  }
+}
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function pickNews() {
+  if (NEWS_LIST.length <= 1) return NEWS_LIST[0];
+  let n;
+  do { 
+    n = NEWS_LIST[Math.floor(Math.random() * NEWS_LIST.length)]; 
+  } while (n === currentNews);
+  return n;
+}
+
+function startGame() {
+  initAudio();
+  startRound();
+}
+
+function startRound() {
+  initAudio();
+  if (interval) clearInterval(interval);
+
+  currentNews = pickNews();
+  document.getElementById('newsTitle').textContent = currentNews.title;
+  
+  seconds = 300;
+  answered = false;
+
+  // Restaura estados visuais
+  const timerEl = document.getElementById('timer');
+  timerEl.classList.remove('warning');
+  document.getElementById('timeoutBanner').classList.add('hidden');
+  
+  const searchBtn = document.getElementById('searchBtn');
+  searchBtn.disabled = false;
+  searchBtn.innerHTML = '🌐 ABRIR GOOGLE PARA PESQUISAR';
+
+  updateTimer();
+  show('game');
+
+  interval = setInterval(() => {
+    seconds--;
+    updateTimer();
+
+    if (seconds <= 0) {
+      clearInterval(interval);
+      handleTimeout();
+    }
+  }, 1000);
+}
+
+function updateTimer() {
+  let m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  let s = (seconds % 60).toString().padStart(2, '0');
+  const timerEl = document.getElementById('timer');
+  timerEl.textContent = m + ':' + s;
+
+  if (seconds <= 30 && seconds > 0) {
+    timerEl.classList.add('warning');
+  }
+}
+
+/* Executado quando o tempo chega a 00:00 */
+function handleTimeout() {
+  document.getElementById('timer').textContent = '00:00';
+  document.getElementById('timer').classList.add('warning');
+  
+  // Toca o som de alerta
+  playBeep();
+
+  // Bloqueia botão de pesquisa
+  const searchBtn = document.getElementById('searchBtn');
+  searchBtn.disabled = true;
+  searchBtn.innerHTML = '🔒 PESQUISA BLOQUEADA (TEMPO ESGOTADO)';
+
+  // Exibe o banner informando que deve escolher
+  document.getElementById('timeoutBanner').classList.remove('hidden');
+}
+
+function openSearch() {
+  window.open('https://www.google.com', '_blank', 'noopener,noreferrer');
+}
+
+function answer(value) {
+  if (answered) return;
+  answered = true;
+  
+  if (interval) clearInterval(interval);
+
+  show('result');
+
+  const title = document.getElementById('resultTitle');
+  const text = document.getElementById('resultText');
+  const icon = document.getElementById('resultIcon');
+  const badge = document.getElementById('resultBadge');
+
+  if (value === currentNews.correct) {
+    icon.textContent = '🎯';
+    badge.textContent = 'MENSAGEM CONFIRMADA';
+    title.textContent = 'BOA INVESTIGAÇÃO!';
+    text.textContent = currentNews.correct 
+      ? 'Você identificou corretamente que a notícia era VERDADEIRA.' 
+      : 'Você identificou corretamente que a notícia era FALSA.';
+    text.className = 'result-box ok';
+  } else {
+    icon.textContent = '⚠️';
+    badge.textContent = 'FALHA DE CHECAGEM';
+    title.textContent = 'RESPOSTA INCORRETA!';
+    text.textContent = currentNews.correct 
+      ? 'Essa notícia era VERDADEIRA, mas você marcou como falsa.' 
+      : 'Essa notícia era FALSA, mas você acreditou nela.';
+    text.className = 'result-box bad';
+  }
+}
+</script>
+</body>
+</html>
