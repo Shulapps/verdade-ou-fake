@@ -181,10 +181,7 @@ input[type="text"] {
   font-size: 18px;
 }
 
-.score-num {
-  color: #38bdf8;
-  font-size: 22px;
-}
+.score-num { color: #38bdf8; font-size: 22px; }
 
 .timer-box {
   background: #0f172a;
@@ -195,13 +192,7 @@ input[type="text"] {
 }
 
 .timer-label { font-size: 9px; font-weight: 800; color: #64748b; letter-spacing: 1px; }
-
-.timer {
-  font-size: 24px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  color: #38bdf8;
-}
+.timer { font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; color: #38bdf8; }
 
 .news-card {
   background: rgba(15, 23, 42, 0.6);
@@ -253,12 +244,12 @@ input[type="text"] {
 </head>
 <body>
 
-<!-- TELA INICIAL / LOBBY MULTIPLAYER -->
+<!-- TELA INICIAL -->
 <section id="start" class="screen">
   <div class="card center">
     <div class="badge">🌐 MELHOR DE 5 ONLINE (P2P)</div>
     <h1>VERDADE OU FAKE?</h1>
-    <p>Quem fizer <b>3 pontos primeiro</b> vence o confronto! Crie a sala ou entre com o código do amigo.</p>
+    <p>Quem fizer <b>3 pontos primeiro</b> vence o jogo! Crie a sala ou entre com o código.</p>
     
     <div style="max-width: 360px; margin: 20px auto;">
       <button class="primary" style="width: 100%; margin-bottom: 12px;" onclick="createRoom()">
@@ -280,7 +271,7 @@ input[type="text"] {
   </div>
 </section>
 
-<!-- TELA DE JOGO ONLINE -->
+<!-- TELA DE JOGO -->
 <section id="game" class="screen hidden">
   <div class="card">
     <div class="hud-top">
@@ -296,11 +287,11 @@ input[type="text"] {
     </div>
 
     <div id="statusBanner" class="status-banner">
-      🕵️ Ambos estão investigando... Quem responder primeiro ativa 30s de pressão!
+      🕵️ Investigando... Quem responder primeiro ativa 30s de pressão no rival!
     </div>
 
     <div class="news-card">
-      <small>🔍 RODADA <span id="roundNumber">1</span> - INVESTIGAÇÃO</small>
+      <small>🔍 RODADA <span id="roundNumber">1</span> DE MULTIPLAYER</small>
       <h3 id="newsTitle">Carregando notícia...</h3>
     </div>
 
@@ -317,7 +308,7 @@ input[type="text"] {
   </div>
 </section>
 
-<!-- TELA DE RESULTADO DE RODADA OU FIM DE JOGO -->
+<!-- TELA DE RESULTADO / TRANSIÇÃO -->
 <section id="result" class="screen hidden">
   <div class="card center">
     <div id="resultIcon" class="result-header">🎯</div>
@@ -326,9 +317,9 @@ input[type="text"] {
     
     <div id="resultText" class="result-box"></div>
 
-    <button id="nextBtn" class="primary" style="width: 100%; max-width: 320px;" onclick="requestNextRound()">
-      ➡️ PRÓXIMA RODADA
-    </button>
+    <div id="nextRoundCountdown" style="font-weight: bold; color: #38bdf8; font-size: 16px;">
+      Avançando automaticamente para a próxima rodada...
+    </div>
   </div>
 </section>
 
@@ -340,6 +331,7 @@ let isHost = false;
 let seconds = 300;
 let mainInterval = null;
 let pressureInterval = null;
+let autoNextTimeout = null;
 let audioCtx = null;
 
 let myScore = 0;
@@ -350,14 +342,14 @@ let myAnswer = null;
 let opponentAnswer = null;
 let gameFinished = false;
 
-// BANCO DE DADOS: 13 NOTÍCIAS (VARIADAS E BALANCEADAS)
+// 13 NOTÍCIAS
 const NEWS_LIST = [
   // VERDADEIRAS (6)
   { id: 1, title: '“Em fevereiro de 2021, o rover Perseverance, da NASA, pousou com sucesso na cratera Jezero, em Marte, para buscar sinais de vida microbiana antiga.”', correct: true },
   { id: 2, title: '“O Japão possui uma ilha chamada Okunoshima que é famosa por ser habitada por centenas de coelhos selvagens amigáveis.”', correct: true },
   { id: 3, title: '“O DNA humano compartilha aproximadamente 60% de sua sequência genética com o DNA das bananas.”', correct: true },
   { id: 4, title: '“A Universidade de Oxford é mais antiga do que o Império Asteca.”', correct: true },
-  { id: 5, title: '“Mel natural nunca estraga; arqueólogos já encontraram potes de mel com mais de 3.000 anos no Egito em perfeito estado para consumo.”', correct: true },
+  { id: 5, title: '“Mel natural nunca estraga; arqueólogos já encontraram potes de mel com mais de 3.000 anos no Egito em perfeito estado.”', correct: true },
   { id: 6, title: '“As impressões digitais dos coalas são tão parecidas com as dos humanos que já confundiram peritos em cenas de crime.”', correct: true },
 
   // FALSAS (7)
@@ -365,7 +357,7 @@ const NEWS_LIST = [
   { id: 8, title: '“Um vídeo viral afirmou que as vacinas contra a Covid-19 continham microchips capazes de rastrear a localização das pessoas.”', correct: false },
   { id: 9, title: '“Cientistas chineses conseguiram clonar com sucesso um dinossauro a partir de DNA encontrado em âmbar.”', correct: false },
   { id: 10, title: '“A Muralha da China é a única estrutura humana visível a olho nu da órbita da Lua.”', correct: false },
-  { id: 11, title: '“Usar o celular próximo a bombas de combustível em postos pode causar explosões por faíscas de frequência magnética.”', correct: false },
+  { id: 11, title: '“Usar o celular próximo a bombas de combustível em postos pode causar explosões por faíscas magnéticas.”', correct: false },
   { id: 12, title: '“A França doou a Estátua da Liberdade para os EUA como pagamento por uma dívida de guerra do século XVIII.”', correct: false },
   { id: 13, title: '“Beber dois copos de água gelada imediatamente antes de dormir acelera o metabolismo e queima 500 calorias durante o sono.”', correct: false }
 ];
@@ -403,7 +395,7 @@ function show(id) {
 function pickRandomNews() {
   const available = NEWS_LIST.filter(n => !usedNewsIds.includes(n.id));
   if (available.length === 0) {
-    usedNewsIds = []; // reseta se esgotar
+    usedNewsIds = [];
     return NEWS_LIST[Math.floor(Math.random() * NEWS_LIST.length)];
   }
   const selected = available[Math.floor(Math.random() * available.length)];
@@ -411,13 +403,12 @@ function pickRandomNews() {
   return selected;
 }
 
-// 1. CRIAR SALA (HOST)
 function createRoom() {
   initAudio();
   isHost = true;
   const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
   
-  document.getElementById('lobbyStatus').textContent = 'Iniciando servidor de sala...';
+  document.getElementById('lobbyStatus').textContent = 'Iniciando sala...';
   peer = new Peer('vf-' + roomCode);
 
   peer.on('open', () => {
@@ -429,17 +420,12 @@ function createRoom() {
     setupConnection();
     currentNews = pickRandomNews();
     setTimeout(() => {
-      conn.send({ type: 'START', newsId: currentNews.id });
+      conn.send({ type: 'START_ROUND', newsId: currentNews.id, round: roundCount, myScore: 0, oppScore: 0 });
       startRound();
     }, 1000);
   });
-
-  peer.on('error', () => {
-    document.getElementById('lobbyStatus').textContent = 'Erro ao criar sala. Tente novamente.';
-  });
 }
 
-// 2. ENTRAR NA SALA (CONVIDADO)
 function joinRoom() {
   initAudio();
   isHost = false;
@@ -453,24 +439,17 @@ function joinRoom() {
     conn = peer.connect('vf-' + roomCode);
     setupConnection();
   });
-
-  peer.on('error', () => {
-    document.getElementById('lobbyStatus').textContent = 'Sala não encontrada. Verifique o código.';
-  });
 }
 
 function setupConnection() {
   conn.on('open', () => {
-    document.getElementById('lobbyStatus').textContent = 'Conectado! Iniciando partida...';
+    document.getElementById('lobbyStatus').textContent = 'Conectado! Iniciando jogo...';
   });
 
   conn.on('data', (data) => {
-    if (data.type === 'START') {
+    if (data.type === 'START_ROUND') {
       currentNews = NEWS_LIST.find(n => n.id === data.newsId);
-      startRound();
-    }
-    if (data.type === 'NEXT_ROUND') {
-      currentNews = NEWS_LIST.find(n => n.id === data.newsId);
+      roundCount = data.round;
       startRound();
     }
     if (data.type === 'OPPONENT_ANSWERED') {
@@ -490,6 +469,7 @@ function startRound() {
 
   if (mainInterval) clearInterval(mainInterval);
   if (pressureInterval) clearInterval(pressureInterval);
+  if (autoNextTimeout) clearTimeout(autoNextTimeout);
 
   document.getElementById('myScore').textContent = myScore;
   document.getElementById('oppScore').textContent = oppScore;
@@ -502,7 +482,7 @@ function startRound() {
 
   const banner = document.getElementById('statusBanner');
   banner.className = 'status-banner';
-  banner.textContent = '🕵️ Ambos estão investigando... Quem responder primeiro ativa 30s de pressão!';
+  banner.textContent = '🕵️ Investigando... Quem responder primeiro ativa 30s de pressão no rival!';
 
   show('game');
 
@@ -534,7 +514,7 @@ function submitAnswer(ans) {
   conn.send({ type: 'OPPONENT_ANSWERED' });
 
   if (opponentAnswer === null) {
-    document.getElementById('statusBanner').textContent = '✅ Resposta enviada! Seu oponente tem 30 segundos sob pressão!';
+    document.getElementById('statusBanner').textContent = '✅ Resposta enviada! Seu oponente tem 30s de pressão!';
   }
 
   conn.send({ type: 'SUBMIT_FINAL_ANS', ans: myAnswer });
@@ -550,7 +530,7 @@ function handleOpponentAnswered() {
 
     const banner = document.getElementById('statusBanner');
     banner.className = 'status-banner pressure-banner';
-    banner.textContent = '🚨 O SEU OPONENTE JÁ RESPANDEU! VOCÊ TEM 30 SEGUNDOS!';
+    banner.textContent = '🚨 SEU OPONENTE JÁ RESPONDEU! VOCÊ TEM 30 SECUNDOS!';
 
     document.getElementById('timerLabel').textContent = 'PRESSÃO!';
     document.getElementById('timer').textContent = '00:30';
@@ -588,24 +568,24 @@ function evaluateRound() {
   const title = document.getElementById('resultTitle');
   const text = document.getElementById('resultText');
   const icon = document.getElementById('resultIcon');
-  const nextBtn = document.getElementById('nextBtn');
+  const countdownEl = document.getElementById('nextRoundCountdown');
 
   if (myCorrect && !oppCorrect) {
     myScore++;
     icon.textContent = '⚡';
     title.textContent = 'PONTO SEU!';
-    text.textContent = 'Você acertou a veracidade da notícia e seu oponente errou.';
+    text.textContent = 'Você acertou o veredito da notícia enquanto seu oponente errou!';
     text.className = 'result-box ok';
   } else if (!myCorrect && oppCorrect) {
     oppScore++;
     icon.textContent = '⚠️';
     title.textContent = 'PONTO DO RIVAL!';
-    text.textContent = 'Seu oponente acertou o veredito e você errou.';
+    text.textContent = 'Seu oponente acertou e você errou.';
     text.className = 'result-box bad';
   } else if (myCorrect && oppCorrect) {
     icon.textContent = '🤝';
     title.textContent = 'EMPATE NA RODADA!';
-    text.textContent = 'Ambos acertaram o veredito. Ninguém pontua!';
+    text.textContent = 'Ambos acertaram! Ninguém pontua.';
     text.className = 'result-box ok';
   } else {
     icon.textContent = '❌';
@@ -614,33 +594,44 @@ function evaluateRound() {
     text.className = 'result-box bad';
   }
 
-  // VERIFICA SE ALGUÉM GANHOU O MELHOR DE 5 (3 PONTOS)
+  // FIM DE JOGO (ALGUÉM CHEGOU A 3 PONTOS)
   if (myScore >= 3 || oppScore >= 3) {
     if (myScore >= 3) {
       icon.textContent = '🏆';
       title.textContent = 'GRANDE CAMPEÃO!';
-      text.textContent = `Você venceu o confronto por ${myScore} x ${oppScore}!`;
+      text.textContent = `Você venceu o jogo por ${myScore} x ${oppScore}!`;
       text.className = 'result-box ok';
     } else {
       icon.textContent = '💀';
-      title.textContent = 'DERROTA FINAL!';
-      text.textContent = `Seu oponente venceu a partida por ${oppScore} x ${myScore}.`;
+      title.textContent = 'DERROTA!';
+      text.textContent = `Seu oponente venceu por ${oppScore} x ${myScore}.`;
       text.className = 'result-box bad';
     }
-    nextBtn.textContent = '🔄 JOGAR NOVAMENTE';
-    nextBtn.onclick = () => location.reload();
+    countdownEl.innerHTML = `<button class="primary" onclick="location.reload()">🔄 JOGAR NOVAMENTE</button>`;
   } else {
-    roundCount++;
-    nextBtn.textContent = '➡️ PRÓXIMA RODADA';
-    nextBtn.onclick = requestNextRound;
+    // PRÓXIMA RODADA AUTOMÁTICA EM 5 SEGUNDOS
+    let c = 5;
+    countdownEl.textContent = `Próxima rodada em ${c} segundos...`;
+    
+    const countInt = setInterval(() => {
+      c--;
+      if (c > 0) {
+        countdownEl.textContent = `Próxima rodada em ${c} segundos...`;
+      } else {
+        clearInterval(countInt);
+      }
+    }, 1000);
+
+    if (isHost) {
+      autoNextTimeout = setTimeout(() => {
+        roundCount++;
+        currentNews = pickRandomNews();
+        conn.send({ type: 'START_ROUND', newsId: currentNews.id, round: roundCount });
+        startRound();
+      }, 5000);
+    }
   }
 }
-
-function requestNextRound() {
-  if (isHost) {
-    currentNews = pickRandomNews();
-    conn.send({ type: 'NEXT_ROUND', newsId: currentNews.id });
-    startRound();
-  } else {
-    document.getElementById('resultText').textContent = 'Aguardando o host iniciar a próxima rodada...';
-  }
+</script>
+</body>
+</html>
