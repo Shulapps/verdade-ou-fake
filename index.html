@@ -3,14 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verdade ou Fake?</title>
+<title>Verdade ou Fake? - Multiplayer Online</title>
+<!-- Biblioteca PeerJS para Multiplayer P2P gratuito sem precisar de servidor próprio -->
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  user-select: none;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
 
 body {
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -23,7 +20,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Background grid efeito game */
 body::before {
   content: "";
   position: fixed;
@@ -43,12 +39,9 @@ body::before {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
 .card {
   width: min(850px, 100%);
@@ -69,7 +62,6 @@ body::before {
   background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
 }
 
-/* Typography & Badges */
 h1 {
   font-size: clamp(32px, 5vw, 54px);
   font-weight: 900;
@@ -81,17 +73,8 @@ h1 {
   text-transform: uppercase;
 }
 
-h2 {
-  font-size: clamp(20px, 3vw, 30px);
-  color: #f8fafc;
-}
-
-p {
-  font-size: 17px;
-  line-height: 1.6;
-  color: #94a3b8;
-  margin-bottom: 16px;
-}
+h2 { font-size: clamp(20px, 3vw, 30px); color: #f8fafc; }
+p { font-size: 17px; line-height: 1.6; color: #94a3b8; margin-bottom: 16px; }
 
 .badge {
   display: inline-flex;
@@ -109,11 +92,10 @@ p {
   margin-bottom: 16px;
 }
 
-/* Buttons */
 button {
   border: 0;
   border-radius: 14px;
-  padding: 18px 28px;
+  padding: 16px 24px;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.5px;
@@ -131,23 +113,23 @@ button:hover:not(:disabled) {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
-button:active:not(:disabled) {
-  transform: translateY(0);
-}
+button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  filter: grayscale(1);
-}
+.primary { background: #3b82f6; color: #ffffff; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); }
+.primary:hover:not(:disabled) { background: #2563eb; }
 
-.primary {
-  background: #3b82f6;
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-}
-.primary:hover:not(:disabled) {
-  background: #2563eb;
+input[type="text"] {
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  color: #fff;
+  font-size: 18px;
+  text-align: center;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
 }
 
 .search-btn {
@@ -165,240 +147,146 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-top: 20px;
+  margin-top: 15px;
 }
 
-@media (max-width: 600px) {
-  .choice-container {
-    grid-template-columns: 1fr;
-  }
-}
+@media (max-width: 600px) { .choice-container { grid-template-columns: 1fr; } }
 
-.choice {
-  padding: 20px;
-  font-size: 17px;
-  border-radius: 16px;
-}
+.choice { padding: 20px; font-size: 18px; border-radius: 14px; width: 100%; }
 
-.true {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 2px solid rgba(34, 197, 94, 0.4);
-}
-.true:hover:not(:disabled) {
-  background: #22c55e;
-  color: #052e16;
-  border-color: #22c55e;
-}
+.true { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 2px solid rgba(34, 197, 94, 0.4); }
+.true:hover:not(:disabled) { background: #22c55e; color: #052e16; border-color: #22c55e; }
 
-.fake {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 2px solid rgba(239, 68, 68, 0.4);
-}
-.fake:hover:not(:disabled) {
-  background: #ef4444;
-  color: #ffffff;
-  border-color: #ef4444;
-}
+.fake { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 2px solid rgba(239, 68, 68, 0.4); }
+.fake:hover:not(:disabled) { background: #ef4444; color: #ffffff; border-color: #ef4444; }
 
-/* Game HUD Top */
 .hud-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding-bottom: 20px;
+  padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .timer-box {
   background: #0f172a;
   border: 2px solid rgba(59, 130, 246, 0.3);
-  padding: 10px 20px;
-  border-radius: 16px;
+  padding: 8px 16px;
+  border-radius: 14px;
   text-align: center;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 }
 
-.timer-label {
-  font-size: 10px;
-  font-weight: 800;
-  color: #64748b;
-  letter-spacing: 1px;
-}
+.timer-label { font-size: 9px; font-weight: 800; color: #64748b; letter-spacing: 1px; }
 
 .timer {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   color: #38bdf8;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
 }
 
-.timer.warning {
-  color: #f43f5e;
-  text-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
-  animation: pulse 1s infinite;
-}
+.timer.warning { color: #f43f5e; animation: pulse 1s infinite; }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* News Box (Desafio) */
 .news-card {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-left: 4px solid #3b82f6;
   border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
 }
 
-.news-card small {
-  color: #38bdf8;
-  font-weight: 800;
-  letter-spacing: 1px;
-  font-size: 11px;
-  text-transform: uppercase;
-}
+.news-card small { color: #38bdf8; font-weight: 800; letter-spacing: 1px; font-size: 11px; text-transform: uppercase; }
+.news-card h3 { font-size: 19px; line-height: 1.4; color: #f1f5f9; margin: 10px 0; font-weight: 600; }
 
-.news-card h3 {
-  font-size: 20px;
-  line-height: 1.5;
-  color: #f1f5f9;
-  margin: 12px 0;
-  font-weight: 600;
-}
-
-/* Banner de alerta quando o tempo acaba */
-.timeout-banner {
-  background: rgba(244, 63, 94, 0.2);
-  border: 1px solid #f43f5e;
-  color: #fda4af;
-  padding: 14px 20px;
+.status-banner {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+  padding: 12px 16px;
   border-radius: 12px;
   font-weight: 800;
   text-align: center;
-  margin-bottom: 20px;
-  font-size: 15px;
-  letter-spacing: 0.5px;
-  animation: bannerSlide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes bannerSlide {
-  from { transform: translateY(-10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* Tip & Linkbox */
-.tip {
+  margin-bottom: 16px;
   font-size: 14px;
-  color: #64748b;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+}
+
+.pressure-banner {
+  background: rgba(244, 63, 94, 0.2);
+  border: 1px solid #f43f5e;
+  color: #fda4af;
+  animation: pulse 1s infinite;
 }
 
 .center { text-align: center; }
-
-/* Screen Result Styling */
-.result-header {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.result-title {
-  font-size: 32px;
-  font-weight: 900;
-  margin-bottom: 12px;
-}
-
+.result-header { font-size: 48px; margin-bottom: 10px; }
 .result-box {
   background: rgba(15, 23, 42, 0.6);
   border-radius: 16px;
   padding: 20px;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   margin: 20px 0;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
-
 .ok { color: #4ade80; border-color: rgba(34, 197, 94, 0.3); }
 .bad { color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
-
-.educational-tip {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-  padding: 20px;
-  text-align: left;
-  margin-bottom: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.educational-tip h4 {
-  color: #e2e8f0;
-  margin-bottom: 8px;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.educational-tip p {
-  font-size: 14px;
-  margin: 0;
-  color: #94a3b8;
-}
 </style>
 </head>
 <body>
 
-<!-- TELA INICIAL -->
+<!-- TELA INICIAL / LOBBY MULTIPLAYER -->
 <section id="start" class="screen">
   <div class="card center">
-    <div class="badge">🎮 SIMULADOR DE INVESTIGAÇÃO</div>
+    <div class="badge">🌐 MULTIPLAYER ONLINE (P2P)</div>
     <h1>VERDADE OU FAKE?</h1>
-    <p>Sua missão é checar a veracidade de notícias virais. Você terá exatamente <b>5 minutos</b> para investigar na web, cruzar fontes e emitir seu veredito.</p>
+    <p>Crie uma sala ou entre com o código do seu amigo para disputar a checagem de notícias em tempo real.</p>
     
-    <div style="margin: 30px 0;">
-      <button class="primary" style="width: 100%; max-width: 320px; font-size: 20px;" onclick="startGame()">
-        ▶ JOGAR
+    <div style="max-width: 360px; margin: 20px auto;">
+      <button class="primary" style="width: 100%; margin-bottom: 12px;" onclick="createRoom()">
+        🏠 CRIAR NOVA SALA
+      </button>
+
+      <div style="position: relative; margin: 15px 0;">
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+        <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #151d2b; padding: 0 10px; font-size: 12px; color: #64748b;">OU</span>
+      </div>
+
+      <input type="text" id="roomInput" placeholder="CÓDIGO DA SALA" maxlength="6">
+      <button class="primary" style="width: 100%; background: #8b5cf6;" onclick="joinRoom()">
+        🔗 ENTRAR NA SALA
       </button>
     </div>
 
-    <div class="tip" style="justify-content: center;">
-      <span>💡 Dica: Ao iniciar, use o botão de busca para checar a notícia em uma nova aba.</span>
-    </div>
+    <div id="lobbyStatus" style="margin-top: 15px; font-weight: bold; color: #38bdf8;"></div>
   </div>
 </section>
 
-<!-- TELA DE JOGO (HUD) -->
+<!-- TELA DE JOGO ONLINE -->
 <section id="game" class="screen hidden">
   <div class="card">
     <div class="hud-top">
       <div>
-        <div class="badge">RODADA EM ANDAMENTO</div>
-        <h2>Analise as evidências</h2>
+        <div class="badge">SALA ONLINE: <span id="roomCodeDisplay">---</span></div>
+        <h2>Analise a Evidência</h2>
       </div>
       <div class="timer-box">
-        <div class="timer-label">TEMPO RESTANTE</div>
+        <div class="timer-label" id="timerLabel">TEMPO RESTANTE</div>
         <div id="timer" class="timer">05:00</div>
       </div>
     </div>
 
-    <div id="timeoutBanner" class="timeout-banner hidden">
-      ⏰ TEMPO ESGOTADO! ESCOLHA SUA RESPOSTA.
+    <div id="statusBanner" class="status-banner">
+      🕵️ Ambos estão investigando... O primeiro a responder vai pressionar o oponente!
     </div>
 
     <div class="news-card">
-      <small>🔍 NOTÍCIA EM INVESTIGAÇÃO</small>
+      <small>🔍 NOTÍCIA DA RODADA</small>
       <h3 id="newsTitle">Carregando notícia...</h3>
-      <p style="font-size: 14px; margin: 0; color: #64748b;"><b>Objetivo:</b> Descubra se esta informação é verdadeira ou falsa antes do tempo esgotar.</p>
     </div>
 
     <div style="margin-bottom: 20px;">
@@ -408,12 +296,8 @@ button:disabled {
     </div>
 
     <div class="choice-container">
-      <button id="btnTrue" class="choice true" onclick="answer(true)">
-        ✓ VERDADEIRA
-      </button>
-      <button id="btnFake" class="choice fake" onclick="answer(false)">
-        ✕ FALSA
-      </button>
+      <button id="btnTrue" class="choice true" onclick="submitAnswer(true)">✓ VERDADEIRA</button>
+      <button id="btnFake" class="choice fake" onclick="submitAnswer(false)">✕ FALSA</button>
     </div>
   </div>
 </section>
@@ -427,33 +311,39 @@ button:disabled {
     
     <div id="resultText" class="result-box"></div>
 
-    <div class="educational-tip">
-      <h4>💡 COLOQUE EM PRÁTICA:</h4>
-      <p>Antes de compartilhar qualquer conteúdo, verifique a fonte original, pesquise em múltiplos veículos de imprensa confiáveis e desconfie de manchetismos alarmistas.</p>
-    </div>
-
-    <button class="primary" style="width: 100%; max-width: 320px;" onclick="startRound()">
+    <button class="primary" style="width: 100%; max-width: 320px;" onclick="location.reload()">
       🔄 JOGAR NOVAMENTE
     </button>
   </div>
 </section>
 
 <script>
+let peer = null;
+let conn = null;
+let isHost = false;
+
 let seconds = 300;
-let interval = null;
-let answered = false;
+let mainInterval = null;
+let pressureInterval = null;
 let audioCtx = null;
+
+let myAnswer = null;
+let opponentAnswered = false;
+let gameFinished = false;
 
 const NEWS_LIST = [
   {
+    id: 1,
     title: '“NASA anuncia descoberta de água líquida em Marte em uma região onde humanos poderiam sobreviver.”',
     correct: false
   },
   {
+    id: 2,
     title: '“Em fevereiro de 2021, o rover Perseverance, da NASA, pousou com sucesso na cratera Jezero, em Marte, para buscar sinais de vida microbiana antiga.”',
     correct: true
   },
   {
+    id: 3,
     title: '“Um vídeo viral afirmou que as vacinas contra a Covid-19 continham microchips capazes de rastrear a localização das pessoas.”',
     correct: false
   }
@@ -461,48 +351,26 @@ const NEWS_LIST = [
 
 let currentNews = NEWS_LIST[0];
 
-/* Inicializa Web Audio API ao interagir */
 function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-/* Toca o beep de alerta ao zerar o cronômetro */
 function playBeep() {
   if (!audioCtx) return;
   try {
     const now = audioCtx.currentTime;
-    
-    // Pulso 1
-    const osc1 = audioCtx.createOscillator();
-    const gain1 = audioCtx.createGain();
-    osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(880, now);
-    gain1.gain.setValueAtTime(0.4, now);
-    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-    osc1.connect(gain1);
-    gain1.connect(audioCtx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.25);
-
-    // Pulso 2
-    const osc2 = audioCtx.createOscillator();
-    const gain2 = audioCtx.createGain();
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(880, now + 0.3);
-    gain2.gain.setValueAtTime(0.4, now + 0.3);
-    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
-    osc2.connect(gain2);
-    gain2.connect(audioCtx.destination);
-    osc2.start(now + 0.3);
-    osc2.stop(now + 0.55);
-  } catch (e) {
-    console.log("Áudio não pôde ser reproduzido:", e);
-  }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(880, now);
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } catch (e) {}
 }
 
 function show(id) {
@@ -510,113 +378,198 @@ function show(id) {
   document.getElementById(id).classList.remove('hidden');
 }
 
-function pickNews() {
-  if (NEWS_LIST.length <= 1) return NEWS_LIST[0];
-  let n;
-  do { 
-    n = NEWS_LIST[Math.floor(Math.random() * NEWS_LIST.length)]; 
-  } while (n === currentNews);
-  return n;
+// 1. CRIAR SALA (HOST)
+function createRoom() {
+  initAudio();
+  isHost = true;
+  const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  document.getElementById('lobbyStatus').textContent = 'Iniciando servidor de sala...';
+  peer = new Peer('vf-' + roomCode);
+
+  peer.on('open', () => {
+    document.getElementById('lobbyStatus').innerHTML = `SALA CRIADA!<br>Código: <span style="color:#fff; font-size:24px;">${roomCode}</span><br>Aguardando oponente entrar...`;
+  });
+
+  peer.on('connection', (c) => {
+    conn = c;
+    setupConnection();
+    // Escolhe notícia e manda pro convidado
+    currentNews = NEWS_LIST[Math.floor(Math.random() * NEWS_LIST.length)];
+    setTimeout(() => {
+      conn.send({ type: 'START', newsId: currentNews.id, code: roomCode });
+      startMatch(roomCode);
+    }, 1000);
+  });
+
+  peer.on('error', (err) => {
+    document.getElementById('lobbyStatus').textContent = 'Erro ao criar sala. Tente novamente.';
+  });
 }
 
-function startGame() {
+// 2. ENTRAR NA SALA (CONVIDADO)
+function joinRoom() {
   initAudio();
-  startRound();
+  isHost = false;
+  const roomCode = document.getElementById('roomInput').value.trim();
+  if (!roomCode) return alert('Digite o código da sala!');
+
+  document.getElementById('lobbyStatus').textContent = 'Conectando à sala...';
+  peer = new Peer();
+
+  peer.on('open', () => {
+    conn = peer.connect('vf-' + roomCode);
+    setupConnection();
+  });
+
+  peer.on('error', () => {
+    document.getElementById('lobbyStatus').textContent = 'Sala não encontrada. Verifique o código.';
+  });
 }
 
-function startRound() {
-  initAudio();
-  if (interval) clearInterval(interval);
+// Configuração de envio e recebimento de mensagens P2P
+function setupConnection() {
+  conn.on('open', () => {
+    document.getElementById('lobbyStatus').textContent = 'Conectado! Iniciando partida...';
+  });
 
-  currentNews = pickNews();
+  conn.on('data', (data) => {
+    if (data.type === 'START') {
+      currentNews = NEWS_LIST.find(n => n.id === data.newsId);
+      startMatch(data.code);
+    }
+    if (data.type === 'OPPONENT_ANSWERED') {
+      handleOpponentAnswered();
+    }
+    if (data.type === 'FINAL_RESULT') {
+      evaluateWinner(data);
+    }
+  });
+}
+
+function startMatch(code) {
+  document.getElementById('roomCodeDisplay').textContent = code;
   document.getElementById('newsTitle').textContent = currentNews.title;
-  
-  seconds = 300;
-  answered = false;
-
-  // Restaura estados visuais
-  const timerEl = document.getElementById('timer');
-  timerEl.classList.remove('warning');
-  document.getElementById('timeoutBanner').classList.add('hidden');
-  
-  const searchBtn = document.getElementById('searchBtn');
-  searchBtn.disabled = false;
-  searchBtn.innerHTML = '🌐 ABRIR GOOGLE PARA PESQUISAR';
-
-  updateTimer();
   show('game');
 
-  interval = setInterval(() => {
+  seconds = 300;
+  mainInterval = setInterval(() => {
     seconds--;
-    updateTimer();
+    let m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    let s = (seconds % 60).toString().padStart(2, '0');
+    document.getElementById('timer').textContent = m + ':' + s;
 
     if (seconds <= 0) {
-      clearInterval(interval);
-      handleTimeout();
+      clearInterval(mainInterval);
+      playBeep();
+      document.getElementById('searchBtn').disabled = true;
     }
   }, 1000);
-}
-
-function updateTimer() {
-  let m = Math.floor(seconds / 60).toString().padStart(2, '0');
-  let s = (seconds % 60).toString().padStart(2, '0');
-  const timerEl = document.getElementById('timer');
-  timerEl.textContent = m + ':' + s;
-
-  if (seconds <= 30 && seconds > 0) {
-    timerEl.classList.add('warning');
-  }
-}
-
-/* Executado quando o tempo chega a 00:00 */
-function handleTimeout() {
-  document.getElementById('timer').textContent = '00:00';
-  document.getElementById('timer').classList.add('warning');
-  
-  // Toca o som de alerta
-  playBeep();
-
-  // Bloqueia botão de pesquisa
-  const searchBtn = document.getElementById('searchBtn');
-  searchBtn.disabled = true;
-  searchBtn.innerHTML = '🔒 PESQUISA BLOQUEADA (TEMPO ESGOTADO)';
-
-  // Exibe o banner informando que deve escolher
-  document.getElementById('timeoutBanner').classList.remove('hidden');
 }
 
 function openSearch() {
   window.open('https://www.google.com', '_blank', 'noopener,noreferrer');
 }
 
-function answer(value) {
-  if (answered) return;
-  answered = true;
-  
-  if (interval) clearInterval(interval);
+// Quando você clica em VERDADEIRA ou FALSA
+function submitAnswer(ans) {
+  if (myAnswer !== null || gameFinished) return;
+  myAnswer = ans;
 
+  document.getElementById('btnTrue').disabled = true;
+  document.getElementById('btnFake').disabled = true;
+
+  // Notifica o oponente via PeerJS
+  conn.send({ type: 'OPPONENT_ANSWERED' });
+
+  if (!opponentAnswered) {
+    // Você foi o PRIMEIRO a responder!
+    document.getElementById('statusBanner').textContent = '✅ Você já respondeu! Seu oponente agora tem 30 segundos sob pressão!';
+    document.getElementById('statusBanner').className = 'status-banner';
+  } else {
+    // Ambos já responderam
+    finishGame();
+  }
+}
+
+// Quando você recebe o aviso de que O OPONENTE respondeu primeiro
+function handleOpponentAnswered() {
+  opponentAnswered = true;
+  playBeep();
+
+  if (myAnswer === null) {
+    // Você ainda não respondeu, entra o CRONÔMETRO DE PRESSÃO DE 30s!
+    clearInterval(mainInterval);
+    let pSeconds = 30;
+
+    const banner = document.getElementById('statusBanner');
+    banner.className = 'status-banner pressure-banner';
+    banner.textContent = '🚨 O SEU OPONENTE JÁ RESPANDEU! VOCÊ TEM APENAS 30 SEGUNDOS!';
+
+    document.getElementById('timerLabel').textContent = 'PRESSÃO!';
+    document.getElementById('timer').textContent = '00:30';
+
+    pressureInterval = setInterval(() => {
+      pSeconds--;
+      document.getElementById('timer').textContent = '00:' + pSeconds.toString().padStart(2, '0');
+
+      if (pSeconds <= 0) {
+        clearInterval(pressureInterval);
+        // Tempo de pressão esgotou!
+        if (myAnswer === null) {
+          myAnswer = 'TIMEOUT'; // Perdeu por tempo
+          finishGame();
+        }
+      }
+    }, 1000);
+  } else {
+    // Se você já tinha respondido, finaliza
+    finishGame();
+  }
+}
+
+function finishGame() {
+  if (gameFinished) return;
+  gameFinished = true;
+  if (mainInterval) clearInterval(mainInterval);
+  if (pressureInterval) clearInterval(pressureInterval);
+
+  // Envia dados para o oponente sincronizar resultados
+  conn.send({ 
+    type: 'FINAL_RESULT', 
+    ans: myAnswer 
+  });
+}
+
+function evaluateWinner(opponentData) {
   show('result');
+
+  const myCorrect = (myAnswer === currentNews.correct);
+  const oppCorrect = (opponentData.ans === currentNews.correct);
 
   const title = document.getElementById('resultTitle');
   const text = document.getElementById('resultText');
   const icon = document.getElementById('resultIcon');
-  const badge = document.getElementById('resultBadge');
 
-  if (value === currentNews.correct) {
-    icon.textContent = '🎯';
-    badge.textContent = 'MENSAGEM CONFIRMADA';
-    title.textContent = 'BOA INVESTIGAÇÃO!';
-    text.textContent = currentNews.correct 
-      ? 'Você identificou corretamente que a notícia era VERDADEIRA.' 
-      : 'Você identificou corretamente que a notícia era FALSA.';
+  if (myCorrect && !oppCorrect) {
+    icon.textContent = '🏆';
+    title.textContent = 'VOCÊ VENCEU!';
+    text.textContent = 'Você acertou o veredito da notícia enquanto seu oponente errou!';
+    text.className = 'result-box ok';
+  } else if (!myCorrect && oppCorrect) {
+    icon.textContent = '⚠️';
+    title.textContent = 'VOCÊ PERDEU!';
+    text.textContent = 'Seu oponente acertou o veredito da notícia e você errou.';
+    text.className = 'result-box bad';
+  } else if (myCorrect && oppCorrect) {
+    icon.textContent = '🤝';
+    title.textContent = 'EMPATE! AMBOS ACERTARAM!';
+    text.textContent = 'Os dois investigadores acertaram a veracidade da notícia.';
     text.className = 'result-box ok';
   } else {
-    icon.textContent = '⚠️';
-    badge.textContent = 'FALHA DE CHECAGEM';
-    title.textContent = 'RESPOSTA INCORRETA!';
-    text.textContent = currentNews.correct 
-      ? 'Essa notícia era VERDADEIRA, mas você marcou como falsa.' 
-      : 'Essa notícia era FALSA, mas você acreditou nela.';
+    icon.textContent = '❌';
+    title.textContent = 'AMBOS ERRAM!';
+    text.textContent = 'Nenhum dos dois conseguiu acertar o veredito correto.';
     text.className = 'result-box bad';
   }
 }
