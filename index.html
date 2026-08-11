@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verdade ou Fake? - Multiplayer Online</title>
-<!-- Biblioteca PeerJS para Multiplayer P2P gratuito sem precisar de servidor próprio -->
+<title>Verdade ou Fake? - Melhor de 5 Online</title>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -170,6 +169,23 @@ input[type="text"] {
   margin-bottom: 20px;
 }
 
+.scoreboard {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 18px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.score-num {
+  color: #38bdf8;
+  font-size: 22px;
+}
+
 .timer-box {
   background: #0f172a;
   border: 2px solid rgba(59, 130, 246, 0.3);
@@ -181,15 +197,11 @@ input[type="text"] {
 .timer-label { font-size: 9px; font-weight: 800; color: #64748b; letter-spacing: 1px; }
 
 .timer {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   color: #38bdf8;
 }
-
-.timer.warning { color: #f43f5e; animation: pulse 1s infinite; }
-
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 .news-card {
   background: rgba(15, 23, 42, 0.6);
@@ -222,6 +234,8 @@ input[type="text"] {
   animation: pulse 1s infinite;
 }
 
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
 .center { text-align: center; }
 .result-header { font-size: 48px; margin-bottom: 10px; }
 .result-box {
@@ -242,9 +256,9 @@ input[type="text"] {
 <!-- TELA INICIAL / LOBBY MULTIPLAYER -->
 <section id="start" class="screen">
   <div class="card center">
-    <div class="badge">🌐 MULTIPLAYER ONLINE (P2P)</div>
+    <div class="badge">🌐 MELHOR DE 5 ONLINE (P2P)</div>
     <h1>VERDADE OU FAKE?</h1>
-    <p>Crie uma sala ou entre com o código do seu amigo para disputar a checagem de notícias em tempo real.</p>
+    <p>Quem fizer <b>3 pontos primeiro</b> vence o confronto! Crie a sala ou entre com o código do amigo.</p>
     
     <div style="max-width: 360px; margin: 20px auto;">
       <button class="primary" style="width: 100%; margin-bottom: 12px;" onclick="createRoom()">
@@ -270,9 +284,10 @@ input[type="text"] {
 <section id="game" class="screen hidden">
   <div class="card">
     <div class="hud-top">
-      <div>
-        <div class="badge">SALA ONLINE: <span id="roomCodeDisplay">---</span></div>
-        <h2>Analise a Evidência</h2>
+      <div class="scoreboard">
+        <span>VOCÊ: <span id="myScore" class="score-num">0</span></span>
+        <span style="color:#64748b;">|</span>
+        <span>RIVAL: <span id="oppScore" class="score-num">0</span></span>
       </div>
       <div class="timer-box">
         <div class="timer-label" id="timerLabel">TEMPO RESTANTE</div>
@@ -281,11 +296,11 @@ input[type="text"] {
     </div>
 
     <div id="statusBanner" class="status-banner">
-      🕵️ Ambos estão investigando... O primeiro a responder vai pressionar o oponente!
+      🕵️ Ambos estão investigando... Quem responder primeiro ativa 30s de pressão!
     </div>
 
     <div class="news-card">
-      <small>🔍 NOTÍCIA DA RODADA</small>
+      <small>🔍 RODADA <span id="roundNumber">1</span> - INVESTIGAÇÃO</small>
       <h3 id="newsTitle">Carregando notícia...</h3>
     </div>
 
@@ -302,7 +317,7 @@ input[type="text"] {
   </div>
 </section>
 
-<!-- TELA DE RESULTADO -->
+<!-- TELA DE RESULTADO DE RODADA OU FIM DE JOGO -->
 <section id="result" class="screen hidden">
   <div class="card center">
     <div id="resultIcon" class="result-header">🎯</div>
@@ -311,8 +326,8 @@ input[type="text"] {
     
     <div id="resultText" class="result-box"></div>
 
-    <button class="primary" style="width: 100%; max-width: 320px;" onclick="location.reload()">
-      🔄 JOGAR NOVAMENTE
+    <button id="nextBtn" class="primary" style="width: 100%; max-width: 320px;" onclick="requestNextRound()">
+      ➡️ PRÓXIMA RODADA
     </button>
   </div>
 </section>
@@ -327,29 +342,36 @@ let mainInterval = null;
 let pressureInterval = null;
 let audioCtx = null;
 
+let myScore = 0;
+let oppScore = 0;
+let roundCount = 1;
+
 let myAnswer = null;
-let opponentAnswered = false;
+let opponentAnswer = null;
 let gameFinished = false;
 
+// BANCO DE DADOS: 13 NOTÍCIAS (VARIADAS E BALANCEADAS)
 const NEWS_LIST = [
-  {
-    id: 1,
-    title: '“NASA anuncia descoberta de água líquida em Marte em uma região onde humanos poderiam sobreviver.”',
-    correct: false
-  },
-  {
-    id: 2,
-    title: '“Em fevereiro de 2021, o rover Perseverance, da NASA, pousou com sucesso na cratera Jezero, em Marte, para buscar sinais de vida microbiana antiga.”',
-    correct: true
-  },
-  {
-    id: 3,
-    title: '“Um vídeo viral afirmou que as vacinas contra a Covid-19 continham microchips capazes de rastrear a localização das pessoas.”',
-    correct: false
-  }
+  // VERDADEIRAS (6)
+  { id: 1, title: '“Em fevereiro de 2021, o rover Perseverance, da NASA, pousou com sucesso na cratera Jezero, em Marte, para buscar sinais de vida microbiana antiga.”', correct: true },
+  { id: 2, title: '“O Japão possui uma ilha chamada Okunoshima que é famosa por ser habitada por centenas de coelhos selvagens amigáveis.”', correct: true },
+  { id: 3, title: '“O DNA humano compartilha aproximadamente 60% de sua sequência genética com o DNA das bananas.”', correct: true },
+  { id: 4, title: '“A Universidade de Oxford é mais antiga do que o Império Asteca.”', correct: true },
+  { id: 5, title: '“Mel natural nunca estraga; arqueólogos já encontraram potes de mel com mais de 3.000 anos no Egito em perfeito estado para consumo.”', correct: true },
+  { id: 6, title: '“As impressões digitais dos coalas são tão parecidas com as dos humanos que já confundiram peritos em cenas de crime.”', correct: true },
+
+  // FALSAS (7)
+  { id: 7, title: '“NASA anuncia descoberta de água líquida em Marte em uma região onde humanos poderiam sobreviver imediatamente.”', correct: false },
+  { id: 8, title: '“Um vídeo viral afirmou que as vacinas contra a Covid-19 continham microchips capazes de rastrear a localização das pessoas.”', correct: false },
+  { id: 9, title: '“Cientistas chineses conseguiram clonar com sucesso um dinossauro a partir de DNA encontrado em âmbar.”', correct: false },
+  { id: 10, title: '“A Muralha da China é a única estrutura humana visível a olho nu da órbita da Lua.”', correct: false },
+  { id: 11, title: '“Usar o celular próximo a bombas de combustível em postos pode causar explosões por faíscas de frequência magnética.”', correct: false },
+  { id: 12, title: '“A França doou a Estátua da Liberdade para os EUA como pagamento por uma dívida de guerra do século XVIII.”', correct: false },
+  { id: 13, title: '“Beber dois copos de água gelada imediatamente antes de dormir acelera o metabolismo e queima 500 calorias durante o sono.”', correct: false }
 ];
 
-let currentNews = NEWS_LIST[0];
+let usedNewsIds = [];
+let currentNews = null;
 
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -378,6 +400,17 @@ function show(id) {
   document.getElementById(id).classList.remove('hidden');
 }
 
+function pickRandomNews() {
+  const available = NEWS_LIST.filter(n => !usedNewsIds.includes(n.id));
+  if (available.length === 0) {
+    usedNewsIds = []; // reseta se esgotar
+    return NEWS_LIST[Math.floor(Math.random() * NEWS_LIST.length)];
+  }
+  const selected = available[Math.floor(Math.random() * available.length)];
+  usedNewsIds.push(selected.id);
+  return selected;
+}
+
 // 1. CRIAR SALA (HOST)
 function createRoom() {
   initAudio();
@@ -394,15 +427,14 @@ function createRoom() {
   peer.on('connection', (c) => {
     conn = c;
     setupConnection();
-    // Escolhe notícia e manda pro convidado
-    currentNews = NEWS_LIST[Math.floor(Math.random() * NEWS_LIST.length)];
+    currentNews = pickRandomNews();
     setTimeout(() => {
-      conn.send({ type: 'START', newsId: currentNews.id, code: roomCode });
-      startMatch(roomCode);
+      conn.send({ type: 'START', newsId: currentNews.id });
+      startRound();
     }, 1000);
   });
 
-  peer.on('error', (err) => {
+  peer.on('error', () => {
     document.getElementById('lobbyStatus').textContent = 'Erro ao criar sala. Tente novamente.';
   });
 }
@@ -427,7 +459,6 @@ function joinRoom() {
   });
 }
 
-// Configuração de envio e recebimento de mensagens P2P
 function setupConnection() {
   conn.on('open', () => {
     document.getElementById('lobbyStatus').textContent = 'Conectado! Iniciando partida...';
@@ -436,20 +467,43 @@ function setupConnection() {
   conn.on('data', (data) => {
     if (data.type === 'START') {
       currentNews = NEWS_LIST.find(n => n.id === data.newsId);
-      startMatch(data.code);
+      startRound();
+    }
+    if (data.type === 'NEXT_ROUND') {
+      currentNews = NEWS_LIST.find(n => n.id === data.newsId);
+      startRound();
     }
     if (data.type === 'OPPONENT_ANSWERED') {
       handleOpponentAnswered();
     }
-    if (data.type === 'FINAL_RESULT') {
-      evaluateWinner(data);
+    if (data.type === 'SUBMIT_FINAL_ANS') {
+      opponentAnswer = data.ans;
+      checkRoundEnd();
     }
   });
 }
 
-function startMatch(code) {
-  document.getElementById('roomCodeDisplay').textContent = code;
+function startRound() {
+  myAnswer = null;
+  opponentAnswer = null;
+  gameFinished = false;
+
+  if (mainInterval) clearInterval(mainInterval);
+  if (pressureInterval) clearInterval(pressureInterval);
+
+  document.getElementById('myScore').textContent = myScore;
+  document.getElementById('oppScore').textContent = oppScore;
+  document.getElementById('roundNumber').textContent = roundCount;
   document.getElementById('newsTitle').textContent = currentNews.title;
+
+  document.getElementById('btnTrue').disabled = false;
+  document.getElementById('btnFake').disabled = false;
+  document.getElementById('timerLabel').textContent = 'TEMPO RESTANTE';
+
+  const banner = document.getElementById('statusBanner');
+  banner.className = 'status-banner';
+  banner.textContent = '🕵️ Ambos estão investigando... Quem responder primeiro ativa 30s de pressão!';
+
   show('game');
 
   seconds = 300;
@@ -462,7 +516,6 @@ function startMatch(code) {
     if (seconds <= 0) {
       clearInterval(mainInterval);
       playBeep();
-      document.getElementById('searchBtn').disabled = true;
     }
   }, 1000);
 }
@@ -471,7 +524,6 @@ function openSearch() {
   window.open('https://www.google.com', '_blank', 'noopener,noreferrer');
 }
 
-// Quando você clica em VERDADEIRA ou FALSA
 function submitAnswer(ans) {
   if (myAnswer !== null || gameFinished) return;
   myAnswer = ans;
@@ -479,32 +531,26 @@ function submitAnswer(ans) {
   document.getElementById('btnTrue').disabled = true;
   document.getElementById('btnFake').disabled = true;
 
-  // Notifica o oponente via PeerJS
   conn.send({ type: 'OPPONENT_ANSWERED' });
 
-  if (!opponentAnswered) {
-    // Você foi o PRIMEIRO a responder!
-    document.getElementById('statusBanner').textContent = '✅ Você já respondeu! Seu oponente agora tem 30 segundos sob pressão!';
-    document.getElementById('statusBanner').className = 'status-banner';
-  } else {
-    // Ambos já responderam
-    finishGame();
+  if (opponentAnswer === null) {
+    document.getElementById('statusBanner').textContent = '✅ Resposta enviada! Seu oponente tem 30 segundos sob pressão!';
   }
+
+  conn.send({ type: 'SUBMIT_FINAL_ANS', ans: myAnswer });
+  checkRoundEnd();
 }
 
-// Quando você recebe o aviso de que O OPONENTE respondeu primeiro
 function handleOpponentAnswered() {
-  opponentAnswered = true;
   playBeep();
 
   if (myAnswer === null) {
-    // Você ainda não respondeu, entra o CRONÔMETRO DE PRESSÃO DE 30s!
     clearInterval(mainInterval);
     let pSeconds = 30;
 
     const banner = document.getElementById('statusBanner');
     banner.className = 'status-banner pressure-banner';
-    banner.textContent = '🚨 O SEU OPONENTE JÁ RESPANDEU! VOCÊ TEM APENAS 30 SEGUNDOS!';
+    banner.textContent = '🚨 O SEU OPONENTE JÁ RESPANDEU! VOCÊ TEM 30 SEGUNDOS!';
 
     document.getElementById('timerLabel').textContent = 'PRESSÃO!';
     document.getElementById('timer').textContent = '00:30';
@@ -515,64 +561,86 @@ function handleOpponentAnswered() {
 
       if (pSeconds <= 0) {
         clearInterval(pressureInterval);
-        // Tempo de pressão esgotou!
         if (myAnswer === null) {
-          myAnswer = 'TIMEOUT'; // Perdeu por tempo
-          finishGame();
+          submitAnswer('TIMEOUT');
         }
       }
     }, 1000);
-  } else {
-    // Se você já tinha respondido, finaliza
-    finishGame();
   }
 }
 
-function finishGame() {
-  if (gameFinished) return;
-  gameFinished = true;
-  if (mainInterval) clearInterval(mainInterval);
-  if (pressureInterval) clearInterval(pressureInterval);
-
-  // Envia dados para o oponente sincronizar resultados
-  conn.send({ 
-    type: 'FINAL_RESULT', 
-    ans: myAnswer 
-  });
+function checkRoundEnd() {
+  if (myAnswer !== null && opponentAnswer !== null && !gameFinished) {
+    gameFinished = true;
+    if (mainInterval) clearInterval(mainInterval);
+    if (pressureInterval) clearInterval(pressureInterval);
+    
+    evaluateRound();
+  }
 }
 
-function evaluateWinner(opponentData) {
+function evaluateRound() {
   show('result');
 
   const myCorrect = (myAnswer === currentNews.correct);
-  const oppCorrect = (opponentData.ans === currentNews.correct);
+  const oppCorrect = (opponentAnswer === currentNews.correct);
 
   const title = document.getElementById('resultTitle');
   const text = document.getElementById('resultText');
   const icon = document.getElementById('resultIcon');
+  const nextBtn = document.getElementById('nextBtn');
 
   if (myCorrect && !oppCorrect) {
-    icon.textContent = '🏆';
-    title.textContent = 'VOCÊ VENCEU!';
-    text.textContent = 'Você acertou o veredito da notícia enquanto seu oponente errou!';
+    myScore++;
+    icon.textContent = '⚡';
+    title.textContent = 'PONTO SEU!';
+    text.textContent = 'Você acertou a veracidade da notícia e seu oponente errou.';
     text.className = 'result-box ok';
   } else if (!myCorrect && oppCorrect) {
+    oppScore++;
     icon.textContent = '⚠️';
-    title.textContent = 'VOCÊ PERDEU!';
-    text.textContent = 'Seu oponente acertou o veredito da notícia e você errou.';
+    title.textContent = 'PONTO DO RIVAL!';
+    text.textContent = 'Seu oponente acertou o veredito e você errou.';
     text.className = 'result-box bad';
   } else if (myCorrect && oppCorrect) {
     icon.textContent = '🤝';
-    title.textContent = 'EMPATE! AMBOS ACERTARAM!';
-    text.textContent = 'Os dois investigadores acertaram a veracidade da notícia.';
+    title.textContent = 'EMPATE NA RODADA!';
+    text.textContent = 'Ambos acertaram o veredito. Ninguém pontua!';
     text.className = 'result-box ok';
   } else {
     icon.textContent = '❌';
     title.textContent = 'AMBOS ERRAM!';
-    text.textContent = 'Nenhum dos dois conseguiu acertar o veredito correto.';
+    text.textContent = 'Ninguém acertou a notícia nesta rodada.';
     text.className = 'result-box bad';
   }
+
+  // VERIFICA SE ALGUÉM GANHOU O MELHOR DE 5 (3 PONTOS)
+  if (myScore >= 3 || oppScore >= 3) {
+    if (myScore >= 3) {
+      icon.textContent = '🏆';
+      title.textContent = 'GRANDE CAMPEÃO!';
+      text.textContent = `Você venceu o confronto por ${myScore} x ${oppScore}!`;
+      text.className = 'result-box ok';
+    } else {
+      icon.textContent = '💀';
+      title.textContent = 'DERROTA FINAL!';
+      text.textContent = `Seu oponente venceu a partida por ${oppScore} x ${myScore}.`;
+      text.className = 'result-box bad';
+    }
+    nextBtn.textContent = '🔄 JOGAR NOVAMENTE';
+    nextBtn.onclick = () => location.reload();
+  } else {
+    roundCount++;
+    nextBtn.textContent = '➡️ PRÓXIMA RODADA';
+    nextBtn.onclick = requestNextRound;
+  }
 }
-</script>
-</body>
-</html>
+
+function requestNextRound() {
+  if (isHost) {
+    currentNews = pickRandomNews();
+    conn.send({ type: 'NEXT_ROUND', newsId: currentNews.id });
+    startRound();
+  } else {
+    document.getElementById('resultText').textContent = 'Aguardando o host iniciar a próxima rodada...';
+  }
