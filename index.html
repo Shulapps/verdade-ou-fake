@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verdade ou Fake? - Melhor de 5 Online</title>
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<!-- CDN ultra estável do PeerJS via Cloudflare -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
 
@@ -72,7 +73,6 @@ h1 {
   text-transform: uppercase;
 }
 
-h2 { font-size: clamp(20px, 3vw, 30px); color: #f8fafc; }
 p { font-size: 17px; line-height: 1.6; color: #94a3b8; margin-bottom: 16px; }
 
 .badge {
@@ -252,7 +252,7 @@ input[type="text"] {
     <p>Quem fizer <b>3 pontos primeiro</b> vence o jogo! Crie a sala ou entre com o código.</p>
     
     <div style="max-width: 360px; margin: 20px auto;">
-      <button class="primary" style="width: 100%; margin-bottom: 12px;" onclick="createRoom()">
+      <button id="btnCreate" class="primary" style="width: 100%; margin-bottom: 12px;" onclick="createRoom()">
         🏠 CRIAR NOVA SALA
       </button>
 
@@ -262,7 +262,7 @@ input[type="text"] {
       </div>
 
       <input type="text" id="roomInput" placeholder="CÓDIGO DA SALA" maxlength="6">
-      <button class="primary" style="width: 100%; background: #8b5cf6;" onclick="joinRoom()">
+      <button id="btnJoin" class="primary" style="width: 100%; background: #8b5cf6;" onclick="joinRoom()">
         🔗 ENTRAR NA SALA
       </button>
     </div>
@@ -318,7 +318,7 @@ input[type="text"] {
     <div id="resultText" class="result-box"></div>
 
     <div id="nextRoundCountdown" style="font-weight: bold; color: #38bdf8; font-size: 16px;">
-      Avançando automaticamente para a próxima rodada...
+      Avançando para a próxima rodada...
     </div>
   </div>
 </section>
@@ -332,7 +332,6 @@ let seconds = 300;
 let mainInterval = null;
 let pressureInterval = null;
 let autoNextTimeout = null;
-let audioCtx = null;
 
 let myScore = 0;
 let oppScore = 0;
@@ -342,19 +341,16 @@ let myAnswer = null;
 let opponentAnswer = null;
 let gameFinished = false;
 
-// 13 NOTÍCIAS
+// BANCO COM AS 13 NOTÍCIAS
 const NEWS_LIST = [
-  // VERDADEIRAS (6)
   { id: 1, title: '“Em fevereiro de 2021, o rover Perseverance, da NASA, pousou com sucesso na cratera Jezero, em Marte, para buscar sinais de vida microbiana antiga.”', correct: true },
   { id: 2, title: '“O Japão possui uma ilha chamada Okunoshima que é famosa por ser habitada por centenas de coelhos selvagens amigáveis.”', correct: true },
   { id: 3, title: '“O DNA humano compartilha aproximadamente 60% de sua sequência genética com o DNA das bananas.”', correct: true },
   { id: 4, title: '“A Universidade de Oxford é mais antiga do que o Império Asteca.”', correct: true },
   { id: 5, title: '“Mel natural nunca estraga; arqueólogos já encontraram potes de mel com mais de 3.000 anos no Egito em perfeito estado.”', correct: true },
   { id: 6, title: '“As impressões digitais dos coalas são tão parecidas com as dos humanos que já confundiram peritos em cenas de crime.”', correct: true },
-
-  // FALSAS (7)
   { id: 7, title: '“NASA anuncia descoberta de água líquida em Marte em uma região onde humanos poderiam sobreviver imediatamente.”', correct: false },
-  { id: 8, title: '“Um vídeo viral afirmou que as vacinas contra a Covid-19 continham microchips capazes de rastrear a localização das pessoas.”', correct: false },
+  { id: 8, title: '“Um vídeo viral afirmou que las vacinas contra a Covid-19 continham microchips capazes de rastrear a localização das pessoas.”', correct: false },
   { id: 9, title: '“Cientistas chineses conseguiram clonar com sucesso um dinossauro a partir de DNA encontrado em âmbar.”', correct: false },
   { id: 10, title: '“A Muralha da China é a única estrutura humana visível a olho nu da órbita da Lua.”', correct: false },
   { id: 11, title: '“Usar o celular próximo a bombas de combustível em postos pode causar explosões por faíscas magnéticas.”', correct: false },
@@ -364,28 +360,6 @@ const NEWS_LIST = [
 
 let usedNewsIds = [];
 let currentNews = null;
-
-function initAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-
-function playBeep() {
-  if (!audioCtx) return;
-  try {
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(880, now);
-    gain.gain.setValueAtTime(0.4, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 0.3);
-  } catch (e) {}
-}
 
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
@@ -404,15 +378,23 @@ function pickRandomNews() {
 }
 
 function createRoom() {
-  initAudio();
+  if (typeof Peer === 'undefined') {
+    return alert('A biblioteca de conexão não carregou. Verifique sua conexão com a internet.');
+  }
+
   isHost = true;
+  document.getElementById('btnCreate').disabled = true;
+  document.getElementById('btnJoin').disabled = true;
+
+  // Gera código limpo de 6 dígitos
   const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  document.getElementById('lobbyStatus').textContent = 'Iniciando sala...';
+  document.getElementById('lobbyStatus').textContent = 'Conectando ao servidor...';
+
+  if (peer) peer.destroy();
   peer = new Peer('vf-' + roomCode);
 
   peer.on('open', () => {
-    document.getElementById('lobbyStatus').innerHTML = `SALA CRIADA!<br>Código: <span style="color:#fff; font-size:24px;">${roomCode}</span><br>Aguardando oponente entrar...`;
+    document.getElementById('lobbyStatus').innerHTML = `SALA CRIADA!<br>Código: <span style="color:#fff; font-size:26px;">${roomCode}</span><br><br>Aguardando oponente entrar...`;
   });
 
   peer.on('connection', (c) => {
@@ -420,30 +402,49 @@ function createRoom() {
     setupConnection();
     currentNews = pickRandomNews();
     setTimeout(() => {
-      conn.send({ type: 'START_ROUND', newsId: currentNews.id, round: roundCount, myScore: 0, oppScore: 0 });
+      conn.send({ type: 'START_ROUND', newsId: currentNews.id, round: roundCount });
       startRound();
-    }, 1000);
+    }, 800);
+  });
+
+  peer.on('error', (err) => {
+    document.getElementById('btnCreate').disabled = false;
+    document.getElementById('btnJoin').disabled = false;
+    document.getElementById('lobbyStatus').textContent = 'Erro ao criar sala. Tente clicar em Criar novamente.';
   });
 }
 
 function joinRoom() {
-  initAudio();
+  if (typeof Peer === 'undefined') {
+    return alert('A biblioteca de conexão não carregou. Verifique sua conexão com a internet.');
+  }
+
   isHost = false;
   const roomCode = document.getElementById('roomInput').value.trim();
   if (!roomCode) return alert('Digite o código da sala!');
 
-  document.getElementById('lobbyStatus').textContent = 'Conectando à sala...';
+  document.getElementById('btnCreate').disabled = true;
+  document.getElementById('btnJoin').disabled = true;
+  document.getElementById('lobbyStatus').textContent = 'Procurando sala...';
+
+  if (peer) peer.destroy();
   peer = new Peer();
 
   peer.on('open', () => {
     conn = peer.connect('vf-' + roomCode);
     setupConnection();
   });
+
+  peer.on('error', (err) => {
+    document.getElementById('btnCreate').disabled = false;
+    document.getElementById('btnJoin').disabled = false;
+    document.getElementById('lobbyStatus').textContent = 'Código inválido ou sala não encontrada.';
+  });
 }
 
 function setupConnection() {
   conn.on('open', () => {
-    document.getElementById('lobbyStatus').textContent = 'Conectado! Iniciando jogo...';
+    document.getElementById('lobbyStatus').textContent = 'Conectado com sucesso! Entrando...';
   });
 
   conn.on('data', (data) => {
@@ -459,6 +460,11 @@ function setupConnection() {
       opponentAnswer = data.ans;
       checkRoundEnd();
     }
+  });
+
+  conn.on('close', () => {
+    alert('A conexão com o oponente foi perdida.');
+    location.reload();
   });
 }
 
@@ -495,7 +501,6 @@ function startRound() {
 
     if (seconds <= 0) {
       clearInterval(mainInterval);
-      playBeep();
     }
   }, 1000);
 }
@@ -522,15 +527,13 @@ function submitAnswer(ans) {
 }
 
 function handleOpponentAnswered() {
-  playBeep();
-
   if (myAnswer === null) {
     clearInterval(mainInterval);
     let pSeconds = 30;
 
     const banner = document.getElementById('statusBanner');
     banner.className = 'status-banner pressure-banner';
-    banner.textContent = '🚨 SEU OPONENTE JÁ RESPONDEU! VOCÊ TEM 30 SECUNDOS!';
+    banner.textContent = '🚨 SEU OPONENTE JÁ RESPONDEU! VOCÊ TEM 30 SEGUNDOS!';
 
     document.getElementById('timerLabel').textContent = 'PRESSÃO!';
     document.getElementById('timer').textContent = '00:30';
@@ -594,12 +597,12 @@ function evaluateRound() {
     text.className = 'result-box bad';
   }
 
-  // FIM DE JOGO (ALGUÉM CHEGOU A 3 PONTOS)
+  // ALGUÉM CHEGOU A 3 PONTOS
   if (myScore >= 3 || oppScore >= 3) {
     if (myScore >= 3) {
       icon.textContent = '🏆';
       title.textContent = 'GRANDE CAMPEÃO!';
-      text.textContent = `Você venceu o jogo por ${myScore} x ${oppScore}!`;
+      text.textContent = `Você venceu a partida por ${myScore} x ${oppScore}!`;
       text.className = 'result-box ok';
     } else {
       icon.textContent = '💀';
@@ -609,8 +612,7 @@ function evaluateRound() {
     }
     countdownEl.innerHTML = `<button class="primary" onclick="location.reload()">🔄 JOGAR NOVAMENTE</button>`;
   } else {
-    // PRÓXIMA RODADA AUTOMÁTICA EM 5 SEGUNDOS
-    let c = 5;
+    let c = 4;
     countdownEl.textContent = `Próxima rodada em ${c} segundos...`;
     
     const countInt = setInterval(() => {
@@ -628,7 +630,7 @@ function evaluateRound() {
         currentNews = pickRandomNews();
         conn.send({ type: 'START_ROUND', newsId: currentNews.id, round: roundCount });
         startRound();
-      }, 5000);
+      }, 4000);
     }
   }
 }
